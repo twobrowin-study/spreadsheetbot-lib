@@ -60,7 +60,7 @@ class NotificationsAdapterClass(AbstractSheetAdapter):
         return df
     
     async def _process_df_update(self):
-        self.states = self.as_df.state.values
+        self.states = self.as_df[self.as_df.state.str.len() > 0].state.values
     
     async def set_done(self, idx: int|str):
         await self._update_record(idx, 'is_active', I18n.done)
