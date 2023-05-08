@@ -1,5 +1,3 @@
-import sys
-
 from telegram import Bot
 from telegram.ext import (
     Application,
