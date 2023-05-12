@@ -77,14 +77,15 @@ class UsersAdapterClass(AbstractSheetAdapter):
         self.should_send_report = lambda count: count % Report.send_every_x_active_users == 0
 
         self.is_active = lambda user: user.is_active == I18n.yes
+        self.get_state_string = lambda user, state: user[state] if user[state] != '' else I18n.data_empty if not Registration.is_document_state(state) else state
         self.user_data_markdown = lambda user: "\n".join([
-            f"{state}: *{user[state] if not Registration.is_document_state(state) else state}*"
+            f"{state}: *{self.get_state_string(user, state)}*"
             for state in Registration.main_states
         ]) + f"\n*{I18n.is_active if self.is_active(user) else I18n.is_inactive}*"
         self.user_data_inline_keyboard = lambda user: InlineKeyboardMarkup([
             [
                 InlineKeyboardButton(
-                    user[state] if not Registration.is_document_state(state) else state,
+                    self.get_state_string(user, state),
                     callback_data=self.CALLBACK_USER_CHANGE_STATE_TEMPLATE.format(state=state))
             ]
             for state in Registration.main_states

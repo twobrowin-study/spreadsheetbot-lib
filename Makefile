@@ -1,3 +1,6 @@
+local_install:
+	pip install -e .
+
 build:
 	python3 -m build
 
