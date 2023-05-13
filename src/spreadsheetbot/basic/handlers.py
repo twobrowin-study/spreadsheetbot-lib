@@ -13,7 +13,7 @@ from spreadsheetbot.sheets.users import Users
 from spreadsheetbot.basic.log import Log
 from spreadsheetbot.basic.errors import BotShouldBeInactive
 
-async def ErrorHandlerFun(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def ErrorHandlerFun(update: Update|dict, context: ContextTypes.DEFAULT_TYPE) -> None:
     if type(context.error) == BotShouldBeInactive:
         Log.error(msg="Exception Bot should be inactive", exc_info=context.error)
         exit(1)
@@ -23,7 +23,7 @@ async def ErrorHandlerFun(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     tb_list = traceback.format_exception(None, context.error, context.error.__traceback__)
     tb_string = "".join(tb_list)
 
-    update_str = update.to_dict() if isinstance(update, Update) else str(update)
+    update_str = update.to_dict() if isinstance(update, Update) else update if isinstance(update, dict) else str(update)
     message = (
         f"An exception was raised while handling an update\n"
         f"<pre>update = {html.escape(json.dumps(update_str, indent=2, ensure_ascii=False))}"
@@ -32,8 +32,7 @@ async def ErrorHandlerFun(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         f"<pre>context.user_data = {html.escape(str(context.user_data))}</pre>\n\n"
         f"<pre>{html.escape(tb_string)}</pre>"
     )
-
-    await Groups.send_to_all_superadmin_groups(context.bot, message, ParseMode.HTML)
+    Groups.send_to_all_superadmin_groups(context.application, message, ParseMode.HTML)
 
 async def ChatMemberHandlerFun(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     Log.debug(f"Chat member event \n{update.my_chat_member}\n")

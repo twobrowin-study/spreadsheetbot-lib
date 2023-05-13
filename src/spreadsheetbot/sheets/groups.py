@@ -1,8 +1,8 @@
 import pandas as pd
 from spreadsheetbot.sheets.abstract import AbstractSheetAdapter
 
-from telegram import Message, Update, Chat, Bot
-from telegram.ext import ContextTypes
+from telegram import Message, Update, Chat
+from telegram.ext import Application, ContextTypes
 
 from spreadsheetbot.sheets.i18n import I18n
 from spreadsheetbot.sheets.settings import Settings
@@ -33,22 +33,22 @@ class GroupsAdapterClass(AbstractSheetAdapter):
         df.chat_id = df.chat_id.apply(str)
         return df
     
-    async def send_to_all_normal_groups(self, bot: Bot, message: str, parse_mode: str, send_photo: str = None):
-        await self._send_to_all_uids(
+    def send_to_all_normal_groups(self, app: Application, message: str, parse_mode: str, send_photo: str = None):
+        self._send_to_all_uids(
             self.as_df.is_admin == I18n.no,
-            bot, message, parse_mode, send_photo
+            app, message, parse_mode, send_photo
         )
     
-    async def send_to_all_admin_groups(self, bot: Bot, message: str, parse_mode: str, send_photo: str = None):
-        await self._send_to_all_uids(
+    def send_to_all_admin_groups(self, app: Application, message: str, parse_mode: str, send_photo: str = None):
+        self._send_to_all_uids(
             self.as_df.is_admin.isin(I18n.yes_super),
-            bot, message, parse_mode, send_photo
+            app, message, parse_mode, send_photo
         )
     
-    async def send_to_all_superadmin_groups(self, bot: Bot, message: str, parse_mode: str, send_photo: str = None):
-        await self._send_to_all_uids(
+    def send_to_all_superadmin_groups(self, app: Application, message: str, parse_mode: str, send_photo: str = None):
+        self._send_to_all_uids(
             self.as_df.is_admin == I18n.super,
-            bot, message, parse_mode, send_photo
+            app, message, parse_mode, send_photo
         )
     
     class GroupChatClass(AbstractSheetAdapter.AbstractFilter):

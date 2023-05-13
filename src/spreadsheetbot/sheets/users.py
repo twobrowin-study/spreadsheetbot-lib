@@ -2,7 +2,6 @@ import pandas as pd
 from spreadsheetbot.sheets.abstract import AbstractSheetAdapter
 
 from telegram import (
-    Bot,
     Message,
     Update,
     Chat,
@@ -12,7 +11,7 @@ from telegram import (
     TelegramObject
 )
 from telegram.constants import ParseMode
-from telegram.ext import ContextTypes
+from telegram.ext import Application, ContextTypes
 from telegram.ext.filters import (
     UpdateType
 )
@@ -116,19 +115,17 @@ class UsersAdapterClass(AbstractSheetAdapter):
     async def unbanned(self, chat_id: int|str):
         await self._update_record(chat_id, 'is_bot_banned', I18n.no)
     
-    async def _change_message_after_callback(self, chat_id: int|str, message_id: int|str, bot: Bot) -> None:
-        try:
-            user = self._get(self.selector(chat_id))
-            keyboard_row = Keyboard.registration_keyboard_row
-            await bot.edit_message_text(
-                keyboard_row.text_markdown.format(user=self.user_data_markdown(user)),
-                chat_id=chat_id,
-                message_id=message_id,
-                reply_markup=self.user_data_inline_keyboard(user),
-                parse_mode=ParseMode.MARKDOWN
-            )
-        except Exception:
-            Log.debug(f"Was not able to edit a message for chat id {chat_id}")
+    async def _change_message_after_callback(self, chat_id: int|str, message_id: int|str, app: Application) -> None:
+        user = self._get(self.selector(chat_id))
+        keyboard_row = Keyboard.registration_keyboard_row
+        message = keyboard_row.text_markdown.format(user=self.user_data_markdown(user))
+        reply_markup = self.user_data_inline_keyboard(user)
+        app.create_task(
+            app.bot.edit_message_text(
+                message, chat_id=chat_id, message_id=message_id, reply_markup=reply_markup, parse_mode=ParseMode.MARKDOWN
+            ),
+            self._create_update_context('Message change', chat_id=chat_id, message_id=message_id, reply_markup=reply_markup)
+        )
 
     def _prepare_state_to_save(self, message: Message, document_link: str) -> tuple[str|TelegramObject|None, str|None]:
         if document_link in ["", None]:
@@ -139,13 +136,13 @@ class UsersAdapterClass(AbstractSheetAdapter):
             return(message.document, document_link)
         return (None, None)
     
-    async def send_notification_to_all_users(self, bot: Bot, message: str, parse_mode: str,
+    async def send_notification_to_all_users(self, app: Application, message: str, parse_mode: str,
                                              send_photo: str = None, state: str = None,
                                              condition: str = None):
         condition_column = 'is_active' if condition in [None, ''] else condition
-        await self._send_to_all_uids(
+        self._send_to_all_uids(
             self.selector_condition(condition_column),
-            bot, message, parse_mode,
+            app, message, parse_mode,
             send_photo,
             reply_markup=Notifications.get_keyboard(state)
         )
@@ -257,12 +254,10 @@ class UsersAdapterClass(AbstractSheetAdapter):
 
         count = self.active_user_count()
         if last_main_state and self.should_send_report(count):
-            context.application.create_task(
-                Groups.send_to_all_admin_groups(
-                    context.bot,
-                    Report.currently_active_users_template.format(count=count),
-                    ParseMode.MARKDOWN
-                )
+            Groups.send_to_all_admin_groups(
+                context.application,
+                Report.currently_active_users_template.format(count=count),
+                ParseMode.MARKDOWN
             )
     
     async def restart_help_on_registration_complete_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -312,7 +307,7 @@ class UsersAdapterClass(AbstractSheetAdapter):
         await self._update_record(update.effective_chat.id, 'is_active',
             I18n.no if update.callback_query.data == self.CALLBACK_USER_SET_INACTIVE else I18n.yes
         )
-        await self._change_message_after_callback(update.effective_chat.id, update.callback_query.message.message_id, context.bot)
+        await self._change_message_after_callback(update.effective_chat.id, update.callback_query.message.message_id, context.application)
     
     async def change_state_callback_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.callback_query.answer()
@@ -363,7 +358,7 @@ class UsersAdapterClass(AbstractSheetAdapter):
                 state: state_val
             }
         )
-        await self._change_message_after_callback(update.effective_chat.id, message_id, context.bot)
+        await self._change_message_after_callback(update.effective_chat.id, message_id, context.application)
     
     async def restart_help_notification_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         template = Settings.user_template_from_update(update)
@@ -417,20 +412,21 @@ class UsersAdapterClass(AbstractSheetAdapter):
     
     async def strange_error_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_markdown(Settings.strange_user_error, reply_markup=ReplyKeyboardRemove())
+        chat_id = update.effective_chat.id
         message = (
-            f"Strange error on user with id `{update.effective_chat.id}` "
+            f"Strange error on user with id `{chat_id}` "
             f"and username `{update.effective_chat.username}` "
             f"- user is not registered, but the bot is active"
         )
         Log.info(message)
-        context.application.create_task(
-            LogSheet.write(update.effective_chat.id, (
-                f"Strange error, user {update.effective_chat.username} "
-                f"is not registered, but the bot is active"
-            ))
+        log_sheet_message = (
+            f"Strange error, user {update.effective_chat.username} "
+            f"is not registered, but the bot is active"
         )
         context.application.create_task(
-            Groups.send_to_all_superadmin_groups(context.bot, message, ParseMode.MARKDOWN)
+            LogSheet.write(chat_id, log_sheet_message),
+            self._create_update_context('Log sheet write', message=log_sheet_message, user_id=chat_id)
         )
+        Groups.send_to_all_superadmin_groups(context.application, message, ParseMode.MARKDOWN)
 
 Users = UsersAdapterClass()

@@ -5,7 +5,6 @@ from gspread import utils
 import pandas as pd
 
 from telegram import (
-    Bot,
     InlineKeyboardMarkup,
     Document
 )
@@ -79,8 +78,17 @@ class AbstractSheetAdapter():
 
     async def _get_df(self) -> pd.DataFrame:
         pass
+
+    def _create_update_context(self, action, **kwargs) -> dict:
+        return {
+            'action': action,
+            'name': self.name,
+        } | kwargs
     
-    async def update(self, app: Application) -> None:
+    def update(self, app: Application) -> None:
+        app.create_task(self._update(app), self._create_update_context('Whole df update'))
+    
+    async def _update(self, app: Application) -> None:
         await self._pre_update()
         await asyncio.sleep(self.update_sleep_time)
         
@@ -88,7 +96,7 @@ class AbstractSheetAdapter():
         while len(self.mutex) > 0:
             Log.info(f"Halted whole df update at {self.name} with mutex {self.mutex}")
             await asyncio.sleep(self.retry_sleep_time)
-        app.create_task(self.update(app))
+        self.update(app)
         self.whole_mutex = True
         
         await self._connect()
@@ -181,7 +189,10 @@ class AbstractSheetAdapter():
         
         await self.wks.batch_update(wks_update)
         if get_file != None and save_to != None and save_as != None and app != None:
-            app.create_task(SaveToDrive(self.agc.gc.auth.token, save_to, save_as, get_file))
+            app.create_task(
+                SaveToDrive(self.agc.gc.auth.token, save_to, save_as, get_file),
+                self._create_update_context('Save to drive', save_to=save_to, save_as=save_as)
+            )
         
         del self.mutex[self.mutex.index(uid)]
         Log.info(f"Done batch update {record_action} record in {self.name} with {self.uid_col} {uid} and {collumns} collumns")
@@ -193,21 +204,28 @@ class AbstractSheetAdapter():
             return None
         return row.iloc[iloc]
 
-    async def _send_to_all_uids(self, selector, bot: Bot, message: str, parse_mode: str, 
+    def _send_to_all_uids(self, selector, app: Application, message: str, parse_mode: str, 
         send_photo: str = None, reply_markup: InlineKeyboardMarkup = None
     ):
-        if send_photo == None or send_photo == '':
+        update = self._create_update_context(
+            'Send to all uids',
+            message=message,
+            parse_mode=parse_mode,
+            send_photo=send_photo,
+            reply_markup=reply_markup.to_dict() if reply_markup else reply_markup
+        )
+        if send_photo not in [None, '']:
             for uid in self.as_df.loc[selector][self.uid_col].to_list():
-                try:
-                    await bot.send_message(chat_id=uid, text=message, parse_mode=parse_mode, reply_markup=reply_markup)
-                except Exception:
-                    Log.info(f"Error while sending message to id {uid}")
+                app.create_task(
+                    app.bot.send_photo(chat_id=uid, photo=send_photo, caption=message, parse_mode=parse_mode, reply_markup=reply_markup),
+                    update
+                )
             return
         for uid in self.as_df.loc[selector][self.uid_col].to_list():
-            try:
-                await bot.send_photo(chat_id=uid, photo=send_photo, caption=message, parse_mode=parse_mode, reply_markup=reply_markup)
-            except Exception:
-                Log.info(f"Error while sending photo to id {uid}")
+            app.create_task(
+                app.bot.send_message(chat_id=uid, text=message, parse_mode=parse_mode, reply_markup=reply_markup),
+                update
+            )
     
     class AbstractFilter(MessageFilter):
         def __init__(self, name: str = None, data_filter: bool = False, outer_obj = None):
