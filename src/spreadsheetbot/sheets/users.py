@@ -136,9 +136,9 @@ class UsersAdapterClass(AbstractSheetAdapter):
             return(message.document, document_link)
         return (None, None)
     
-    async def send_notification_to_all_users(self, app: Application, message: str, parse_mode: str,
-                                             send_photo: str = None, state: str = None,
-                                             condition: str = None):
+    def send_notification_to_all_users(self, app: Application, message: str, parse_mode: str,
+                                        send_photo: str = None, state: str = None,
+                                        condition: str = None):
         condition_column = 'is_active' if condition in [None, ''] else condition
         self._send_to_all_uids(
             self.selector_condition(condition_column),

@@ -19,7 +19,7 @@ from spreadsheetbot.sheets import (
     Report,
     Keyboard,
     Notifications,
-    PerfomNotifications
+    PerformAndScheldueNotifications
 )
 
 from spreadsheetbot.basic import Log, INFO, DEBUG
@@ -61,15 +61,15 @@ class SpreadSheetBot():
 
         await LogSheet.write(None, "Started an application")
 
-        Switch.update(app)
-        Settings.update(app)
-        Groups.update(app)
-        Users.update(app)
-        Registration.update(app)
-        Report.update(app)
-        Keyboard.update(app)
-        Notifications.update(app)
-        PerfomNotifications(app)
+        Switch.scheldue_update(app)
+        Settings.scheldue_update(app)
+        Groups.scheldue_update(app)
+        Users.scheldue_update(app)
+        Registration.scheldue_update(app)
+        Report.scheldue_update(app)
+        Keyboard.scheldue_update(app)
+        Notifications.scheldue_update(app)
+        PerformAndScheldueNotifications(app)
 
     async def post_shutdown(self, app: Application) -> None:
         await LogSheet.write(None, "Stopped an application")

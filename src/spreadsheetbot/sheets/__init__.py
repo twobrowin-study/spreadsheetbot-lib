@@ -15,26 +15,40 @@ from telegram.constants import ParseMode
 
 from spreadsheetbot.basic.log import Log
 
-def PerfomNotifications(app: Application):
+def PerformAndScheldueNotifications(app: Application):
     app.create_task(
-        _perform_notification(app),
+        _perform_notifications(app),
         {
-            'action': 'Perform notification'
+            'action': 'Perform first notifications'
+        }
+    )
+    ScheldueNotifications(app)
+
+def ScheldueNotifications(app: Application) -> None:
+    app.create_task(
+        _scheldue_and_perform_notification(app),
+        {
+            'action': 'Perform scheldued notifications'
         }
     )
 
-async def _perform_notification(app: Application):
+async def _scheldue_and_perform_notification(app: Application) -> None:
+    await asyncio.sleep(Settings.notifications_update_time)
+    ScheldueNotifications(app)
+    await _perform_notifications(app)
+
+async def _perform_notifications(app: Application) -> None:
     Log.info("Start performing notification")
     for idx,row in Notifications.as_df.loc[Notifications.selector_to_notify()].iterrows():
-        await Users.send_notification_to_all_users(
+        Users.send_notification_to_all_users(
             app, row.text_markdown, ParseMode.MARKDOWN, row.send_picture, row.state, row.condition
         )
         if row.state == "":
-            await Groups.send_to_all_normal_groups(app, row.text_markdown, ParseMode.MARKDOWN, row.send_picture)
+            Groups.send_to_all_normal_groups(app, row.text_markdown, ParseMode.MARKDOWN, row.send_picture)
         admin_group_text = \
             Settings.notification_admin_groups_template.format(message=row.text_markdown) if row.condition == None \
             else Settings.notification_admin_groups_condition_template.format(message=row.text_markdown, condition=row.condition)
-        await Groups.send_to_all_admin_groups(
+        Groups.send_to_all_admin_groups(
             app, 
             admin_group_text,
             ParseMode.MARKDOWN,
@@ -42,5 +56,3 @@ async def _perform_notification(app: Application):
         )
         await Notifications.set_done(idx)
     Log.info("Done performing notification")
-    await asyncio.sleep(Settings.notifications_update_time)
-    PerfomNotifications(app)
