@@ -16,12 +16,12 @@ from telegram.constants import ParseMode
 from spreadsheetbot.basic.log import Log
 
 def PerformAndScheldueNotifications(app: Application):
-    app.create_task(
-        _perform_notifications(app),
-        {
-            'action': 'Perform first notifications'
-        }
-    )
+    # app.create_task(
+    #     _perform_notifications(app),
+    #     {
+    #         'action': 'Perform first notifications'
+    #     }
+    # )
     ScheldueNotifications(app)
 
 def ScheldueNotifications(app: Application) -> None:
