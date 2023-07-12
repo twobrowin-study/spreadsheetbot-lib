@@ -20,8 +20,9 @@ class NotificationsAdapterClass(AbstractSheetAdapter):
     def __init__(self) -> None:
         super().__init__('notifications', 'notifications', initialize_as_df=True)
 
-        self.selector_to_notify = lambda: (
-            (self.as_df.is_active == I18n.yes) &
+        self.selector_to_plan = lambda: self.as_df.is_active == I18n.yes
+        self.selector_planned = lambda: (
+            (self.as_df.is_active == I18n.planned) &
             (self.as_df.scheldue_date <= datetime.now())
         )
         self.wks_row_pad = 2
@@ -41,7 +42,7 @@ class NotificationsAdapterClass(AbstractSheetAdapter):
         
         df = df.loc[
             (df.scheldue_date != "") &
-            (df.is_active.isin(I18n.yes_no_done)) &
+            (df.is_active.isin(I18n.yes_no_planned_done)) &
             (df.text_markdown != "") &
             (
                 (
@@ -61,6 +62,15 @@ class NotificationsAdapterClass(AbstractSheetAdapter):
     
     async def _process_df_update(self):
         self.states = self.as_df[self.as_df.state.str.len() > 0].state.values
+    
+    def iterate_over_notifications_to_plan(self) -> list[tuple[int,pd.Series]]:
+        return self.as_df.loc[self.selector_to_plan()].iterrows()
+    
+    def iterate_over_planned_notifications(self) -> list[tuple[int,pd.Series]]:
+        return self.as_df.loc[self.selector_planned()].iterrows()
+    
+    async def set_planned(self, idx: int|str):
+        await self._update_record(idx, 'is_active', I18n.planned)
     
     async def set_done(self, idx: int|str):
         await self._update_record(idx, 'is_active', I18n.done)

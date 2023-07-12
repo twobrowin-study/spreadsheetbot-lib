@@ -8,25 +8,25 @@ from telegram.ext import (
     CallbackQueryHandler,
 )
 
-from spreadsheetbot.sheets import (
-    I18n,
-    LogSheet,
-    Switch,
-    Settings,
-    Groups,
-    Users,
-    Registration,
-    Report,
-    Keyboard,
-    Notifications
-)
+from spreadsheetbot.sheets.i18n import I18n
+from spreadsheetbot.sheets.switch import Switch
+from spreadsheetbot.sheets.settings import Settings
+from spreadsheetbot.sheets.registration import Registration
+from spreadsheetbot.sheets.log import LogSheet
+from spreadsheetbot.sheets.groups import Groups
+from spreadsheetbot.sheets.users import Users
+from spreadsheetbot.sheets.report import Report
+from spreadsheetbot.sheets.keyboard import Keyboard
+from spreadsheetbot.sheets.notifications import Notifications
 
-from spreadsheetbot.basic import (
-    Log,
-    PerformAndScheldueNotifications,
-    ErrorHandlerFun,
-    ChatMemberHandlerFun
-)
+from spreadsheetbot.basic.log import Log
+from logging import INFO, DEBUG
+Log.setLevel(INFO)
+
+from spreadsheetbot.basic.scheldue import PerformAndScheldueNotifications
+from spreadsheetbot.basic.handlers import ErrorHandlerFun, ChatMemberHandlerFun
+
+
 
 UPDATE_GROUP_USER_REQUEST  = 0
 UPDATE_GROUP_GROUP_REQUEST = 2
@@ -71,7 +71,6 @@ class SpreadSheetBot():
         Registration.scheldue_update(app)
         Report.scheldue_update(app)
         Keyboard.scheldue_update(app)
-        Notifications.scheldue_update(app)
         PerformAndScheldueNotifications(app)
 
     async def post_shutdown(self, app: Application) -> None:

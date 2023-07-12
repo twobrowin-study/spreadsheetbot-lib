@@ -88,6 +88,10 @@ class AbstractSheetAdapter():
     def scheldue_update(self, app: Application) -> None:
         app.create_task(self._update(app), self._create_update_context('Whole df update'))
     
+    async def _update_df(self) -> None:
+        await self._connect()
+        self.as_df = await self._get_df()
+    
     async def _update(self, app: Application) -> None:
         await self._pre_update()
         await asyncio.sleep(self.update_sleep_time)
@@ -97,10 +101,9 @@ class AbstractSheetAdapter():
             Log.info(f"Halted whole df update at {self.name} with mutex {self.mutex}")
             await asyncio.sleep(self.retry_sleep_time)
         self.scheldue_update(app)
-        self.whole_mutex = True
         
-        await self._connect()
-        self.as_df = await self._get_df()
+        self.whole_mutex = True
+        await self._update_df()
         self.whole_mutex = False
 
         Log.info(f"Updated whole df {self.name}")

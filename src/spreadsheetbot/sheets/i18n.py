@@ -12,7 +12,7 @@ class I18nAdapterClass(AbstractSheetAdapter):
         for _,row in self.as_df.iterrows():
             setattr(self, row.key, row.value)
         self.yes_no = [self.yes, self.no]
-        self.yes_no_done = [self.yes, self.no, self.done]
+        self.yes_no_planned_done = [self.yes, self.no, self.planned, self.done]
         self.yes_no_super = [self.yes, self.no, self.super]
         self.yes_super = [self.yes, self.super]
 

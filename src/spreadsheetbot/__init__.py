@@ -1,2 +1,4 @@
-from spreadsheetbot.spreadsheetbot import SpreadSheetBot
-from spreadsheetbot.basic import Log, INFO, DEBUG
+from spreadsheetbot.spreadsheetbot import (
+    SpreadSheetBot,
+    Log, INFO, DEBUG
+)
