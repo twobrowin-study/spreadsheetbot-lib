@@ -1,12 +1,21 @@
 import pandas as pd
-from spreadsheetbot.sheets.abstract import AbstractSheetAdapter
+from spreadsheetbot.sheets.replysheet import ReplySheet
 
 from telegram import ReplyKeyboardMarkup
 
 from spreadsheetbot.sheets.i18n import I18n
 from spreadsheetbot.sheets.settings import Settings
 
-class KeyboardAdapterClass(AbstractSheetAdapter):
+class KeyboardAdapterClass(ReplySheet):
+    CALLBACK_SET_STATE_PREFIX   = 'notif_state_'
+    CALLBACK_SET_STATE_TEMPLATE = 'notif_state_{state}'
+    CALLBACK_SET_STATE_PATTERN  = 'notif_state_*'
+
+    CALLBACK_ANSWER_PREFIX    = 'notif_answer_'
+    CALLBACK_ANSWER_TEMPLATE  = 'notif_answer_{state}_{answer}'
+    CALLBACK_ANSWER_PATTERN   = 'notif_answer_*'
+    CALLBACK_ANSWER_SEPARATOR = '_'
+
     def __init__(self) -> None:
         super().__init__('keyboard', 'keyboard', initialize_as_df=True)
     
@@ -19,13 +28,16 @@ class KeyboardAdapterClass(AbstractSheetAdapter):
     async def _get_df(self) -> pd.DataFrame:
         df = pd.DataFrame(await self.wks.get_all_records())
         df = df.drop(index = 0, axis = 0)
+        df = self.reply_buttons_split(df)
         df = df.loc[
             (df.key != "") &
-            (df.is_active == I18n.yes)
+            (df.is_active == I18n.yes) &
+            self.reply_state_get_df_condition(df)
         ]
         return df
     
     async def _process_df_update(self):
+        await super()._process_df_update()
         self.keys = self.as_df.key.values.tolist()
         self.reply_keyboard = ReplyKeyboardMarkup([
             self.keys[idx:idx+2]

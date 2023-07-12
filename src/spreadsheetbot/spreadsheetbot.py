@@ -26,8 +26,6 @@ Log.setLevel(INFO)
 from spreadsheetbot.basic.scheldue import PerformAndScheldueNotifications
 from spreadsheetbot.basic.handlers import ErrorHandlerFun, ChatMemberHandlerFun
 
-
-
 UPDATE_GROUP_USER_REQUEST  = 0
 UPDATE_GROUP_GROUP_REQUEST = 2
 UPDATE_GROUP_CHAT_MEMBER   = 3
@@ -140,19 +138,27 @@ class SpreadSheetBot():
         app.add_handler(MessageHandler(Users.KeyboardKeyInputFilter, Users.keyboard_key_handler, block=False), group=UPDATE_GROUP_USER_REQUEST)
 
         app.add_handlers([
-            CallbackQueryHandler(Users.set_active_state_callback_handler, pattern=Users.CALLBACK_USER_ACTIVE_STATE_PATTERN, block=False),
-            CallbackQueryHandler(Users.change_state_callback_handler,     pattern=Users.CALLBACK_USER_CHANGE_STATE_PATTERN, block=False),
-            CommandHandler(START_COMMAND, Users.restart_help_change_state_handler, filters=Users.HasChangeRegistrationStateFilter, block=False),
-            CommandHandler(HELP_COMMAND,  Users.restart_help_change_state_handler, filters=Users.HasChangeRegistrationStateFilter, block=False),
+            CallbackQueryHandler(Users.set_active_state_callback_handler,          pattern=Users.CALLBACK_USER_ACTIVE_STATE_PATTERN, block=False),
+            CallbackQueryHandler(Users.change_state_callback_handler,              pattern=Users.CALLBACK_USER_CHANGE_STATE_PATTERN, block=False),
+            CommandHandler(START_COMMAND, Users.restart_help_change_state_handler, filters=Users.HasChangeRegistrationStateFilter,   block=False),
+            CommandHandler(HELP_COMMAND,  Users.restart_help_change_state_handler, filters=Users.HasChangeRegistrationStateFilter,   block=False),
             MessageHandler(Users.HasChangeRegistrationStateFilter, Users.change_state_reply_handler, block=False),
         ], group=UPDATE_GROUP_USER_REQUEST)
 
         app.add_handlers([
-            CallbackQueryHandler(Users.notification_set_state_callback_handler, pattern=Notifications.CALLBACK_SET_STATE_PATTERN, block=False),
-            CallbackQueryHandler(Users.notification_answer_callback_handler,    pattern=Notifications.CALLBACK_ANSWER_PATTERN,    block=False),
+            CallbackQueryHandler(Users.notification_set_state_callback_handler,    pattern=Notifications.CALLBACK_SET_STATE_PATTERN,     block=False),
+            CallbackQueryHandler(Users.notification_answer_callback_handler,       pattern=Notifications.CALLBACK_ANSWER_PATTERN,        block=False),
             CommandHandler(START_COMMAND, Users.restart_help_notification_handler, filters=Users.HasNotificationRegistrationStateFilter, block=False),
             CommandHandler(HELP_COMMAND,  Users.restart_help_notification_handler, filters=Users.HasNotificationRegistrationStateFilter, block=False),
-            MessageHandler(Users.HasNotificationRegistrationStateFilter, Users.notification_reply_handler, block=False),
+            MessageHandler(Users.HasNotificationRegistrationStateFilter,           Users.notification_reply_handler,                     block=False),
+        ], group=UPDATE_GROUP_USER_REQUEST)
+
+        app.add_handlers([
+            CallbackQueryHandler(Users.keyboard_set_state_callback_handler,    pattern=Keyboard.CALLBACK_SET_STATE_PATTERN,      block=False),
+            CallbackQueryHandler(Users.keyboard_answer_callback_handler,       pattern=Keyboard.CALLBACK_ANSWER_PATTERN,         block=False),
+            CommandHandler(START_COMMAND, Users.restart_help_keyboard_handler, filters=Users.HasKeyboardRegistrationStateFilter, block=False),
+            CommandHandler(HELP_COMMAND,  Users.restart_help_keyboard_handler, filters=Users.HasKeyboardRegistrationStateFilter, block=False),
+            MessageHandler(Users.HasKeyboardRegistrationStateFilter,           Users.keyboard_reply_handler,                     block=False),
         ], group=UPDATE_GROUP_USER_REQUEST)
         
         app.add_handler(MessageHandler(Users.StrangeErrorFilter, Users.strange_error_handler, block=False), group=UPDATE_GROUP_USER_REQUEST)

@@ -56,6 +56,7 @@ class UsersAdapterClass(AbstractSheetAdapter):
         self.HasNoRegistrationStateFilter           = self.IsRegisteredFilter & self.HasNoRegistrationStateClass(outer_obj=self)
         self.HasChangeRegistrationStateFilter       = self.IsRegisteredFilter & self.HasChangeRegistrationStateClass(outer_obj=self)
         self.HasNotificationRegistrationStateFilter = self.IsRegisteredFilter & self.HasNotificationRegistrationStateClass(outer_obj=self)
+        self.HasKeyboardRegistrationStateFilter     = self.IsRegisteredFilter & self.HasKeyboardRegistrationStateClass(outer_obj=self)
 
         self.IsNotRegisteredFilter    = ~self.IsRegisteredFilter
 
@@ -144,7 +145,7 @@ class UsersAdapterClass(AbstractSheetAdapter):
             self.selector_condition(condition_column),
             app, message, parse_mode,
             send_photo,
-            reply_markup=Notifications.get_keyboard(state)
+            reply_markup=Notifications.get_inline_keyboard_by_state(state)
         )
     
     class PrivateChatClass(AbstractSheetAdapter.AbstractFilter):
@@ -189,6 +190,14 @@ class UsersAdapterClass(AbstractSheetAdapter):
             return not df.loc[
                 (self.outer_obj.selector(message.chat_id)) &
                 (df.state.isin(Notifications.states))
+            ].empty
+
+    class HasKeyboardRegistrationStateClass(AbstractSheetAdapter.AbstractFilter):
+        def filter(self, message: Message) -> bool:
+            df = self.outer_obj.as_df
+            return not df.loc[
+                (self.outer_obj.selector(message.chat_id)) &
+                (df.state.isin(Keyboard.states))
             ].empty
     
     class InputInKeyboardKeysClass(AbstractSheetAdapter.AbstractFilter):
@@ -275,26 +284,43 @@ class UsersAdapterClass(AbstractSheetAdapter):
                 keyboard_row.text_markdown.format(user=self.user_data_markdown(user)),
                 reply_markup=self.user_data_inline_keyboard(user)
             )
-        elif keyboard_row.send_picture == '':
+            return
+
+        condition_column = 'is_active' if keyboard_row.condition in [None, ''] else keyboard_row.condition
+        show_button = not self.as_df.loc[
+            self.selector(update.message.chat_id) &
+            self.selector_condition(condition_column)
+        ].empty
+
+        reply_keyboard = Keyboard.reply_keyboard
+        if keyboard_row.state not in [None, ''] and show_button == True:
+            reply_keyboard = Keyboard.get_inline_keyboard_by_state(keyboard_row.state)
+        
+        if keyboard_row.send_picture == '':
             await update.message.reply_markdown(
                 keyboard_row.text_markdown,
-                reply_markup=Keyboard.reply_keyboard
+                reply_markup=reply_keyboard
             )
-        elif keyboard_row.send_picture != '' and len(keyboard_row.text_markdown) <= 1024:
+            return
+
+        if keyboard_row.send_picture != '' and len(keyboard_row.text_markdown) <= 1024:
             await update.message.reply_photo(
                 keyboard_row.send_picture,
                 caption=keyboard_row.text_markdown,
                 parse_mode=ParseMode.MARKDOWN,
-                reply_markup=Keyboard.reply_keyboard
+                reply_markup=reply_keyboard
             )
-        elif keyboard_row.send_picture != '' and len(keyboard_row.text_markdown) > 1024:
+            return
+
+        if keyboard_row.send_picture != '' and len(keyboard_row.text_markdown) > 1024:
             await update.message.reply_markdown(
                 keyboard_row.text_markdown
             )
             await update.message.reply_photo(
                 keyboard_row.send_picture,
-                reply_markup=Keyboard.reply_keyboard
+                reply_markup=reply_keyboard
             )
+            return
     
     async def set_active_state_callback_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.callback_query.answer()
@@ -364,8 +390,16 @@ class UsersAdapterClass(AbstractSheetAdapter):
         template = Settings.user_template_from_update(update)
         state = self.state(update.effective_chat.id)
         await update.message.reply_markdown(
-            template.format(template = Notifications.get_text_markdown(state)),
-            reply_markup=Notifications.get_keyboard(state)
+            template.format(template = Notifications.get_text_markdown_by_state(state)),
+            reply_markup=Notifications.get_inline_keyboard_by_state(state)
+        )
+    
+    async def restart_help_keyboard_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        template = Settings.user_template_from_update(update)
+        state = self.state(update.effective_chat.id)
+        await update.message.reply_markdown(
+            template.format(template = Keyboard.get_text_markdown_by_state(state)),
+            reply_markup=Keyboard.get_inline_keyboard_by_state(state)
         )
     
     async def notification_set_state_callback_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -373,7 +407,18 @@ class UsersAdapterClass(AbstractSheetAdapter):
         state = update.callback_query.data.removeprefix(Notifications.CALLBACK_SET_STATE_PREFIX)
         await context.bot.send_message(
             update.effective_chat.id,
-            Notifications.get_button_answer(state),
+            Notifications.get_button_answer_by_state(state),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=ReplyKeyboardRemove()
+        )
+        await self._update_record(update.effective_chat.id, 'state', state)
+    
+    async def keyboard_set_state_callback_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        await update.callback_query.answer()
+        state = update.callback_query.data.removeprefix(Keyboard.CALLBACK_SET_STATE_PREFIX)
+        await context.bot.send_message(
+            update.effective_chat.id,
+            Keyboard.get_button_answer_by_state(state),
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=ReplyKeyboardRemove()
         )
@@ -384,7 +429,21 @@ class UsersAdapterClass(AbstractSheetAdapter):
         state,answer_idx = update.callback_query.data\
             .removeprefix(Notifications.CALLBACK_ANSWER_PREFIX)\
             .split(Notifications.CALLBACK_ANSWER_SEPARATOR)
-        text,answer = Notifications.get_button_answer(state, int(answer_idx))
+        text,answer = Notifications.get_button_answer_by_state(state, int(answer_idx))
+        await context.bot.send_message(
+            update.effective_chat.id,
+            text,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=Keyboard.reply_keyboard
+        )
+        await self._update_record(update.effective_chat.id, state, answer)
+    
+    async def keyboard_answer_callback_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        await update.callback_query.answer()
+        state,answer_idx = update.callback_query.data\
+            .removeprefix(Keyboard.CALLBACK_ANSWER_PREFIX)\
+            .split(Keyboard.CALLBACK_ANSWER_SEPARATOR)
+        text,answer = Keyboard.get_button_answer_by_state(state, int(answer_idx))
         await context.bot.send_message(
             update.effective_chat.id,
             text,
@@ -397,7 +456,7 @@ class UsersAdapterClass(AbstractSheetAdapter):
         user    = self.get(update.effective_chat.id)
         state   = user.state
         save_as = user[Settings.user_document_name_field]
-        notification = Notifications.get(state)
+        notification = Notifications.get_by_state(state)
 
         state_val, save_to = self._prepare_state_to_save(update.message, notification.document_link)
         if state_val == None:
@@ -405,6 +464,23 @@ class UsersAdapterClass(AbstractSheetAdapter):
             return
 
         await update.message.reply_markdown(notification.button_answer[1], reply_markup=Keyboard.reply_keyboard)
+        await self._batch_update_or_create_record(update.effective_chat.id, save_to=save_to, save_as=save_as, app=context.application,
+            state = '',
+            **{state: state_val}
+        )
+    
+    async def keyboard_reply_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        user         = self.get(update.effective_chat.id)
+        state        = user.state
+        save_as      = user[Settings.user_document_name_field]
+        keyboard_row = Keyboard.get_by_state(state)
+
+        state_val, save_to = self._prepare_state_to_save(update.message, keyboard_row.document_link)
+        if state_val == None:
+            await update.message.reply_markdown(keyboard_row.button_answer[0], reply_markup=ReplyKeyboardRemove())
+            return
+
+        await update.message.reply_markdown(keyboard_row.button_answer[1], reply_markup=Keyboard.reply_keyboard)
         await self._batch_update_or_create_record(update.effective_chat.id, save_to=save_to, save_as=save_as, app=context.application,
             state = '',
             **{state: state_val}
