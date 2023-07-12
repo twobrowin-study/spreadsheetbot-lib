@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "spreadsheetbot"
-version = "2.1.2"
+version = "2.2.0"
 authors = [
   { name="Egor Dubrovin", email="dubrovin.en@ya.ru" },
 ]
