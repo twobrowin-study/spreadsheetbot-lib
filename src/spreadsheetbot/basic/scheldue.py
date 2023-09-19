@@ -48,7 +48,7 @@ async def _perform_notifications(app: Application, update_df: bool) -> None:
             notification.send_picture
         )
         await Notifications.set_planned(idx)
-    Log.info("Plenned new notifications")
+    Log.info("Planned new notifications")
 
     for idx,notification in Notifications.iterate_over_planned_notifications():
         Users.send_notification_to_all_users(

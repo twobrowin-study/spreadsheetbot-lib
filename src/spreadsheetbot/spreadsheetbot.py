@@ -59,9 +59,18 @@ class SpreadSheetBot():
 
         bot: Bot = app.bot
         await bot.set_my_commands([(HELP_COMMAND, Settings.help_command_description)])
-        await bot.set_my_name(Settings.my_name)
-        await bot.set_my_short_description(Settings.my_short_description)
-        await bot.set_my_description(Settings.my_description)
+        
+        my_name = await bot.get_my_name()
+        if my_name.name != Settings.my_name:
+            await bot.set_my_name(Settings.my_name)
+        
+        my_short_description = await bot.get_my_short_description()
+        if my_short_description.short_description  != Settings.my_short_description:
+            await bot.set_my_short_description(Settings.my_short_description)
+        
+        my_description = await bot.get_my_description()
+        if my_description.description  != Settings.my_description:
+            await bot.set_my_description(Settings.my_description)
 
         await LogSheet.write(None, "Started an application")
 
