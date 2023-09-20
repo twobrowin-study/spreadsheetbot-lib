@@ -6,7 +6,8 @@ from telegram.ext import (
     CommandHandler,
     MessageHandler,
     CallbackQueryHandler,
-    Defaults
+    Defaults,
+    BaseHandler
 )
 
 from spreadsheetbot.sheets.i18n import I18n
@@ -87,7 +88,7 @@ class SpreadSheetBot():
     async def post_shutdown(self, app: Application) -> None:
         await LogSheet.write(None, "Stopped an application")
 
-    def run_polling(self, defaults: Defaults = None):
+    def run_polling(self, defaults: Defaults = None, extra_user_handlers: list[BaseHandler] = None):
         Log.info("Starting...")
         app = ApplicationBuilder() \
             .token(self.bot_token) \
@@ -174,6 +175,9 @@ class SpreadSheetBot():
             CommandHandler(HELP_COMMAND,  Users.restart_help_keyboard_handler, filters=Users.HasKeyboardRegistrationStateFilter, block=False),
             MessageHandler(Users.HasKeyboardRegistrationStateFilter,           Users.keyboard_reply_handler,                     block=False),
         ], group=UPDATE_GROUP_USER_REQUEST)
+
+        if extra_user_handlers:
+            app.add_handlers(extra_user_handlers, group=UPDATE_GROUP_USER_REQUEST)
         
         app.add_handler(MessageHandler(Users.StrangeErrorFilter, Users.strange_error_handler, block=False), group=UPDATE_GROUP_USER_REQUEST)
 
