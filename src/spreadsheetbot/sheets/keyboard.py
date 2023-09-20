@@ -7,13 +7,13 @@ from spreadsheetbot.sheets.i18n import I18n
 from spreadsheetbot.sheets.settings import Settings
 
 class KeyboardAdapterClass(ReplySheet):
-    CALLBACK_SET_STATE_PREFIX   = 'notif_state_'
-    CALLBACK_SET_STATE_TEMPLATE = 'notif_state_{state}'
-    CALLBACK_SET_STATE_PATTERN  = 'notif_state_*'
+    CALLBACK_SET_STATE_PREFIX   = 'key_state_'
+    CALLBACK_SET_STATE_TEMPLATE = 'key_state_{state}'
+    CALLBACK_SET_STATE_PATTERN  = 'key_state_*'
 
-    CALLBACK_ANSWER_PREFIX    = 'notif_answer_'
-    CALLBACK_ANSWER_TEMPLATE  = 'notif_answer_{state}_{answer}'
-    CALLBACK_ANSWER_PATTERN   = 'notif_answer_*'
+    CALLBACK_ANSWER_PREFIX    = 'key_answer_'
+    CALLBACK_ANSWER_TEMPLATE  = 'key_answer_{state}_{answer}'
+    CALLBACK_ANSWER_PATTERN   = 'key_answer_*'
     CALLBACK_ANSWER_SEPARATOR = '_'
 
     def __init__(self) -> None:
