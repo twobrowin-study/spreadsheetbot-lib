@@ -2,10 +2,11 @@ import traceback
 import html
 import json
 
-from telegram import Update, Chat
+from telegram import Bot, Update, Chat
 from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
 
+from spreadsheetbot.sheets.settings import Settings
 from spreadsheetbot.sheets.log import LogSheet
 from spreadsheetbot.sheets.groups import Groups
 from spreadsheetbot.sheets.users import Users
@@ -17,6 +18,10 @@ async def ErrorHandlerFun(update: Update|dict, context: ContextTypes.DEFAULT_TYP
     if type(context.error) == BotShouldBeInactive:
         Log.error(msg="Exception Bot should be inactive", exc_info=context.error)
         exit(1)
+    
+    if isinstance(update, Update):
+        bot: Bot = context.bot
+        await bot.send_message(update.effective_chat.id, Settings.error_reply, parse_mode=ParseMode.MARKDOWN)
 
     Log.error(msg="Exception while handling an update:", exc_info=context.error)
 
