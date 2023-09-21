@@ -29,15 +29,22 @@ async def ErrorHandlerFun(update: Update|dict, context: ContextTypes.DEFAULT_TYP
     tb_string = "".join(tb_list)
 
     update_str = update.to_dict() if isinstance(update, Update) else update if isinstance(update, dict) else str(update)
-    message = (
+    message_upd_ctx = (
         f"An exception was raised while handling an update\n"
         f"<pre>update = {html.escape(json.dumps(update_str, indent=2, ensure_ascii=False))}"
         "</pre>\n\n"
         f"<pre>context.chat_data = {html.escape(str(context.chat_data))}</pre>\n\n"
         f"<pre>context.user_data = {html.escape(str(context.user_data))}</pre>\n\n"
-        f"<pre>{html.escape(tb_string)}</pre>"
     )
-    Groups.send_to_all_superadmin_groups(context.application, message, ParseMode.HTML)
+    message_tb = f"<pre>{html.escape(tb_string)}</pre>"
+    message = f"{message_upd_ctx}{message_tb}"
+
+    if len(message) <= 4096:
+        Groups.send_to_all_superadmin_groups(context.application, message, ParseMode.HTML)
+        return
+    
+    Groups.send_to_all_superadmin_groups(context.application, message_upd_ctx, ParseMode.HTML)
+    Groups.send_to_all_superadmin_groups(context.application, message_tb,      ParseMode.HTML)
 
 async def ChatMemberHandlerFun(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     Log.debug(f"Chat member event \n{update.my_chat_member}\n")
