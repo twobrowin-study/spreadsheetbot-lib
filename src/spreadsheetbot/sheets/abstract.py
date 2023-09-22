@@ -153,7 +153,7 @@ class AbstractSheetAdapter():
         Log.info(f"Done update single record in {self.name} with {self.uid_col} {uid} write to {key} collumn")
         Log.debug(f"Current mutext at {self.name} is {self.mutex}")
     
-    async def _batch_update_or_create_record(self, uid: str|int, save_to = None, save_as = None, app: Application = None, **record_params):
+    async def _batch_update_or_create_record(self, uid: str|int, save_to = None, save_as = None, app: Application = None, raw: bool = True, **record_params):
         exists = self.exists(uid)
         record_action = 'update' if exists else 'create'
         collumns = record_params.keys()
@@ -190,7 +190,7 @@ class AbstractSheetAdapter():
             for key, value in record_params.items()
         ])
         
-        await self.wks.batch_update(wks_update)
+        await self.wks.batch_update(wks_update, raw)
         if get_file != None and save_to != None and save_as != None and app != None:
             app.create_task(
                 SaveToDrive(self.agc.gc.auth.token, save_to, save_as, get_file),
