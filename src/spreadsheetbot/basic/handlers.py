@@ -44,7 +44,9 @@ async def ErrorHandlerFun(update: Update|dict, context: ContextTypes.DEFAULT_TYP
         return
     
     Groups.send_to_all_superadmin_groups(context.application, message_upd_ctx, ParseMode.HTML)
-    Groups.send_to_all_superadmin_groups(context.application, message_tb,      ParseMode.HTML)
+    if len(message_tb) <= 4096:
+        Groups.send_to_all_superadmin_groups(context.application, message_tb,  ParseMode.HTML)
+        return
 
 async def ChatMemberHandlerFun(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     Log.debug(f"Chat member event \n{update.my_chat_member}\n")
