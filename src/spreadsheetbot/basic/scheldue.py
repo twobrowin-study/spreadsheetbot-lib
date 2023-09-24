@@ -41,12 +41,7 @@ async def _perform_notifications(app: Application, update_df: bool) -> None:
         superadmin_group_text = \
             Settings.notification_planned_admin_groups_template.format(notification=notification) if notification.condition in ['', None] \
             else Settings.notification_planned_admin_groups_condition_template.format(notification=notification)
-        Groups.send_to_all_superadmin_groups(
-            app, 
-            superadmin_group_text,
-            ParseMode.MARKDOWN,
-            notification.send_picture
-        )
+        Groups.send_to_all_superadmin_groups(app, superadmin_group_text, ParseMode.MARKDOWN, notification.send_picture)
         await Notifications.set_planned(idx)
     Log.info("Planned new notifications")
 
@@ -59,11 +54,6 @@ async def _perform_notifications(app: Application, update_df: bool) -> None:
         admin_group_text = \
             Settings.notification_admin_groups_template.format(notification=notification) if notification.condition in ['', None] \
             else Settings.notification_admin_groups_condition_template.format(notification=notification)
-        Groups.send_to_all_admin_groups(
-            app, 
-            admin_group_text,
-            ParseMode.MARKDOWN,
-            notification.send_picture
-        )
+        Groups.send_to_all_admin_groups(app, admin_group_text, ParseMode.MARKDOWN, notification.send_picture)
         await Notifications.set_done(idx)
     Log.info("Done performing notification")

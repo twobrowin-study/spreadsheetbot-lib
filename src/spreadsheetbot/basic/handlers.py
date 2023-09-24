@@ -29,24 +29,27 @@ async def ErrorHandlerFun(update: Update|dict, context: ContextTypes.DEFAULT_TYP
     tb_string = "".join(tb_list)
 
     update_str = update.to_dict() if isinstance(update, Update) else update if isinstance(update, dict) else str(update)
-    message_upd_ctx = (
-        f"An exception was raised while handling an update\n"
-        f"<pre>update = {html.escape(json.dumps(update_str, indent=2, ensure_ascii=False))}"
-        "</pre>\n\n"
-        f"<pre>context.chat_data = {html.escape(str(context.chat_data))}</pre>\n\n"
-        f"<pre>context.user_data = {html.escape(str(context.user_data))}</pre>\n\n"
-    )
-    message_tb = f"<pre>{html.escape(tb_string)}</pre>"
-    message = f"{message_upd_ctx}{message_tb}"
+    messages_parts = [
+        f"An exception was raised while handling an update",
+        f"update = {html.escape(json.dumps(update_str, indent=2, ensure_ascii=False))}",
+        f"context.chat_data = {html.escape(str(context.chat_data))}",
+        f"context.user_data = {html.escape(str(context.user_data))}",
+        f"{html.escape(tb_string)}",
+    ]
+    messages = []
+    for idx,message_part in enumerate(messages_parts):
+        curr_len = len(message_part)
+        template = "<pre>{message_part}</pre>\n\n" if idx > 0 else "{message_part}\n"
+        if len(messages) > 0 and (len(messages[-1]) + curr_len <= 4096):
+            messages[-1] += template.format(message_part=message_part)
+        elif curr_len <= 4096:
+            messages.append(template.format(message_part=message_part))
+        else:
+            for idx in range(0,curr_len,4096):
+                messages.append(template.format(message_part=message_part[idx:idx+4096]))
 
-    if len(message) <= 4096:
-        Groups.send_to_all_superadmin_groups(context.application, message, ParseMode.HTML)
-        return
-    
-    if len(message_upd_ctx) <= 4096:
-        Groups.send_to_all_superadmin_groups(context.application, message_upd_ctx, ParseMode.HTML)
-    #if len(message_tb) <= 4096:
-    #    Groups.send_to_all_superadmin_groups(context.application, message_tb,  ParseMode.HTML)
+    for message in messages:
+        await Groups.async_send_to_all_superadmin_groups(context.application, message,  ParseMode.HTML)
 
 async def ChatMemberHandlerFun(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     Log.debug(f"Chat member event \n{update.my_chat_member}\n")

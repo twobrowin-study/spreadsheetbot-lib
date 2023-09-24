@@ -51,6 +51,13 @@ class GroupsAdapterClass(AbstractSheetAdapter):
             app, message, parse_mode, send_photo
         )
     
+    async def async_send_to_all_superadmin_groups(self, app: Application, message: str, parse_mode: str, send_photo: str = None):
+        for send_message_continue in self._get_send_to_all_uids_coroutines(
+            self.as_df.is_admin == I18n.super,
+            app, message, parse_mode, send_photo
+        ):
+            await send_message_continue
+    
     class GroupChatClass(AbstractSheetAdapter.AbstractFilter):
         def filter(self, message: Message) -> bool:
             return message.chat.type in [Chat.GROUP, Chat.SUPERGROUP, Chat.CHANNEL]

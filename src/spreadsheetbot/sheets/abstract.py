@@ -1,3 +1,5 @@
+from typing import Coroutine, Any
+from telegram import Bot
 from telegram.ext import Application
 import asyncio
 import gspread_asyncio
@@ -206,6 +208,21 @@ class AbstractSheetAdapter():
         if row.empty:
             return None
         return row.iloc[iloc]
+    
+
+    def _get_send_to_all_uids_coroutines(self, selector, app: Application, message: str, parse_mode: str, 
+        send_photo: str = None, reply_markup: InlineKeyboardMarkup = None
+    ) -> list[Coroutine[Any, Any, Any]]:
+        bot: Bot = app.bot
+        if send_photo not in [None, '']:
+            return [
+                bot.send_photo(chat_id=uid, photo=send_photo, caption=message, parse_mode=parse_mode, reply_markup=reply_markup)
+                for uid in self.as_df.loc[selector][self.uid_col].to_list()
+            ]
+        return [
+            bot.send_message(chat_id=uid, text=message, parse_mode=parse_mode, reply_markup=reply_markup)
+            for uid in self.as_df.loc[selector][self.uid_col].to_list()
+        ]
 
     def _send_to_all_uids(self, selector, app: Application, message: str, parse_mode: str, 
         send_photo: str = None, reply_markup: InlineKeyboardMarkup = None
@@ -217,18 +234,8 @@ class AbstractSheetAdapter():
             send_photo=send_photo,
             reply_markup=reply_markup.to_dict() if reply_markup else reply_markup
         )
-        if send_photo not in [None, '']:
-            for uid in self.as_df.loc[selector][self.uid_col].to_list():
-                app.create_task(
-                    app.bot.send_photo(chat_id=uid, photo=send_photo, caption=message, parse_mode=parse_mode, reply_markup=reply_markup),
-                    update
-                )
-            return
-        for uid in self.as_df.loc[selector][self.uid_col].to_list():
-            app.create_task(
-                app.bot.send_message(chat_id=uid, text=message, parse_mode=parse_mode, reply_markup=reply_markup),
-                update
-            )
+        for send_message in self._get_send_to_all_uids_coroutines(selector, app, message, parse_mode, send_photo, reply_markup):
+            app.create_task(send_message, update)
     
     class AbstractFilter(MessageFilter):
         def __init__(self, name: str = None, data_filter: bool = False, outer_obj = None):
