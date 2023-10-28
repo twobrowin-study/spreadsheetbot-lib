@@ -2,6 +2,8 @@ from telegram import InlineKeyboardMarkup,InlineKeyboardButton
 import pandas as pd
 from spreadsheetbot.sheets.abstract import AbstractSheetAdapter
 
+from spreadsheetbot.basic.log import Log
+
 class ReplySheet(AbstractSheetAdapter):
     def __init__(self, sheet_name: str, name: str, update_sleep_time: int = None, retry_sleep_time: int = None, initialize_as_df: bool = False) -> None:
         super().__init__(sheet_name, name, update_sleep_time, retry_sleep_time, initialize_as_df)
@@ -42,6 +44,9 @@ class ReplySheet(AbstractSheetAdapter):
         return None
 
     def get_inline_keyboard_by_state(self, state: str) -> InlineKeyboardMarkup|None:
+        if state in [None, '']:
+            Log.info('There is no state so there is no buttons')
+            return None
         button_text = self.get_by_state(state).button_text
         if len(button_text) == 1:
             return InlineKeyboardMarkup([
